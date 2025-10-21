@@ -28,13 +28,11 @@ app.add_middleware(
 
 class TagCreate(BaseModel):
     tag_name: str
-    category: str
     keywords: List[str] = []
 
 class TagResponse(BaseModel):
     id: int
     tag_name: str
-    category: str
     keywords: List[str]
     created_at: datetime
     
@@ -99,13 +97,14 @@ def create_tag(user_id: int, tag_data: TagCreate, db: Session = Depends(get_db))
     tag = Tag(
         user_id=user_id,
         tag_name=tag_data.tag_name,
-        category=tag_data.category,
+        category=None,  # Set to None for now, AI will fill later
         keywords=tag_data.keywords
     )
     db.add(tag)
     db.commit()
     db.refresh(tag)
     return tag
+
 
 @app.get("/users/{user_id}/tags", response_model=List[TagResponse])
 def get_user_tags(user_id: int, db: Session = Depends(get_db)):
