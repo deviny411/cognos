@@ -1,10 +1,10 @@
 # main.py
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware  # ADD THIS
 from sqlalchemy.orm import Session
 from typing import List
 from pydantic import BaseModel
 from datetime import datetime
-
 
 from database import get_db, init_db
 from models import User, Tag, Article, ArticleTag
@@ -13,12 +13,18 @@ from fastapi.responses import HTMLResponse
 from semantic_matcher import SemanticMatcher
 from config import Config
 
-
-
-
 semantic_matcher = SemanticMatcher()
 
 app = FastAPI(title="Cognos", description="Intelligent conversation context platform")
+
+# ADD CORS MIDDLEWARE - ADD THIS ENTIRE SECTION
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class TagCreate(BaseModel):
     tag_name: str
@@ -60,6 +66,30 @@ def create_user(email: str, name: str, db: Session = Depends(get_db)):
     db.refresh(user)
     return {"id": user.id, "email": user.email, "name": user.name}
 
+# ADD THIS NEW ENDPOINT
+@app.get("/users")
+def get_users(db: Session = Depends(get_db)):
+    """Get all users"""
+    users = db.query(User).all()
+    return [{"id": user.id, "email": user.email, "name": user.name} for user in users]
+
+# ADD THIS NEW ENDPOINT
+@app.get("/tags")
+def get_all_tags(db: Session = Depends(get_db)):
+    """Get all tags (for frontend)"""
+    tags = db.query(Tag).all()
+    return [
+        {
+            "id": tag.id,
+            "tag_name": tag.tag_name,
+            "category": tag.category,
+            "keywords": tag.keywords,
+            "user_id": tag.user_id,
+            "created_at": tag.created_at
+        }
+        for tag in tags
+    ]
+
 @app.post("/users/{user_id}/tags", response_model=TagResponse)
 def create_tag(user_id: int, tag_data: TagCreate, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
@@ -81,6 +111,7 @@ def create_tag(user_id: int, tag_data: TagCreate, db: Session = Depends(get_db))
 def get_user_tags(user_id: int, db: Session = Depends(get_db)):
     tags = db.query(Tag).filter(Tag.user_id == user_id).all()
     return tags
+
 @app.get("/tags/{tag_id}/fetch-news")
 def fetch_news_for_tag(tag_id: int, db: Session = Depends(get_db)):
     tag = db.query(Tag).filter(Tag.id == tag_id).first()
@@ -121,7 +152,8 @@ def fetch_news_for_tag(tag_id: int, db: Session = Depends(get_db)):
         )
         article_embedding = semantic_matcher.get_embedding(article_text)
         similarity = semantic_matcher.calculate_similarity(article_embedding, tag_embedding)
-        
+        print(f"Article: {article.title[:60]}... | Similarity: {similarity:.3f}")
+
         # Only link if similarity is above threshold
         if similarity >= Config.SIMILARITY_THRESHOLD:
             # Check if link already exists
@@ -147,8 +179,7 @@ def fetch_news_for_tag(tag_id: int, db: Session = Depends(get_db)):
         "threshold": Config.SIMILARITY_THRESHOLD
     }
 
-
-@app.get("/news/search") #this is endpoint for searching by keyword
+@app.get("/news/search")
 def search_news_by_keyword(keyword: str, page_size: int = 10):
     """
     Quick search for news articles by keyword
@@ -174,7 +205,6 @@ def search_news_by_keyword(keyword: str, page_size: int = 10):
         "articles": results
     }
 
-
 @app.get("/tags/{tag_id}/articles")
 def get_tag_articles(tag_id: int, min_score: float = 0.0, db: Session = Depends(get_db)):
     tag = db.query(Tag).filter(Tag.id == tag_id).first()
@@ -189,6 +219,7 @@ def get_tag_articles(tag_id: int, min_score: float = 0.0, db: Session = Depends(
         article = db.query(Article).filter(Article.id == link.article_id).first()
         if article:
             results.append({
+                "id": article.id,  # ADD THIS
                 "title": article.title,
                 "url": article.url,
                 "source": article.source,
@@ -196,14 +227,9 @@ def get_tag_articles(tag_id: int, min_score: float = 0.0, db: Session = Depends(
                 "published_at": article.published_at,
                 "relevance_score": link.relevance_score
             })
-    return {
-        "tag": tag.tag_name,
-        "total_matches": len(results),
-        "articles": results
-    }
+    return results  # SIMPLIFIED - just return the list
 
-
-@app.get("/news/search-view", response_class=HTMLResponse) #this is a view endpoint for searching by keyword
+@app.get("/news/search-view", response_class=HTMLResponse)
 def search_news_view(keyword: str, page_size: int = 5):
     """
     Returns a nice HTML page with clickable article links
@@ -246,9 +272,6 @@ def search_news_view(keyword: str, page_size: int = 5):
     
     return html
 
-
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
-
