@@ -5,8 +5,7 @@ function CreateTagForm({ userId, onTagCreated }) {
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     tag_name: '',
-    keywords: '',
-    category: ''
+    keywords: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -23,22 +22,22 @@ function CreateTagForm({ userId, onTagCreated }) {
       .filter(k => k.length > 0);
 
     const tagData = {
-      user_id: userId,
       tag_name: formData.tag_name,
-      keywords: keywordsArray,
-      category: formData.category || null
+      keywords: keywordsArray
     };
 
-    api.createTag(tagData)
+    console.log('📤 Creating tag:', tagData);
+
+    api.createTag(userId, tagData)
       .then(response => {
-        console.log('Tag created:', response.data);
-        setFormData({ tag_name: '', keywords: '', category: '' });
+        console.log('✅ Tag created:', response.data);
+        setFormData({ tag_name: '', keywords: '' });
         setIsOpen(false);
         setLoading(false);
         if (onTagCreated) onTagCreated();
       })
       .catch(error => {
-        console.error('Error creating tag:', error);
+        console.error('❌ Error creating tag:', error);
         setError(error.response?.data?.detail || 'Failed to create tag');
         setLoading(false);
       });
@@ -77,16 +76,9 @@ function CreateTagForm({ userId, onTagCreated }) {
             onChange={(e) => setFormData({ ...formData, keywords: e.target.value })}
             placeholder="e.g., AI, machine learning, neural networks"
           />
-        </div>
-
-        <div className="form-group">
-          <label>Category</label>
-          <input
-            type="text"
-            value={formData.category}
-            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-            placeholder="e.g., technology"
-          />
+          <small style={{ color: '#666', fontSize: '0.85rem' }}>
+            These help find relevant articles
+          </small>
         </div>
 
         <div className="form-buttons">

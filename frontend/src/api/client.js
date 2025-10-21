@@ -9,11 +9,33 @@ const apiClient = axios.create({
   },
 });
 
+// Add request interceptor for debugging
+apiClient.interceptors.request.use(request => {
+  console.log('🌐 Making request:', request.method.toUpperCase(), request.url);
+  console.log('🌐 Request data:', request.data);
+  return request;
+});
+
+// Add response interceptor for debugging
+apiClient.interceptors.response.use(
+  response => {
+    console.log('✅ Response:', response.status, response.data);
+    return response;
+  },
+  error => {
+    console.error('❌ Request failed:', error.response?.status, error.response?.data);
+    return Promise.reject(error);
+  }
+);
+
 export const api = {
   // Tags
   getTags: () => apiClient.get('/tags'),
   getTag: (id) => apiClient.get(`/tags/${id}`),
-  createTag: (data) => apiClient.post('/tags', data),
+  createTag: (userId, data) => {
+    console.log('📝 createTag called with userId:', userId, 'data:', data);
+    return apiClient.post(`/users/${userId}/tags`, data);
+  },
   
   // Articles
   getArticlesForTag: (tagId, minScore = null) => {
