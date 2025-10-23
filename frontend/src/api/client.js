@@ -36,6 +36,8 @@ export const api = {
     console.log('📝 createTag called with userId:', userId, 'data:', data);
     return apiClient.post(`/users/${userId}/tags`, data);
   },
+
+  deleteTag: (tagId) => apiClient.delete(`/tags/${tagId}`),  // ADD THIS
   
   // Articles
   getArticlesForTag: (tagId, minScore = null) => {

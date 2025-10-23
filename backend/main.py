@@ -271,6 +271,23 @@ def search_news_view(keyword: str, page_size: int = 5):
     
     return html
 
+@app.delete("/tags/{tag_id}")
+def delete_tag(tag_id: int, db: Session = Depends(get_db)):
+    """Delete a tag and all its associated article links"""
+    tag = db.query(Tag).filter(Tag.id == tag_id).first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    
+    # Delete associated article-tag links first
+    db.query(ArticleTag).filter(ArticleTag.tag_id == tag_id).delete()
+    
+    # Delete the tag
+    db.delete(tag)
+    db.commit()
+    
+    return {"message": f"Tag '{tag.tag_name}' deleted successfully", "id": tag_id}
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
