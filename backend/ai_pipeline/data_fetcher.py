@@ -13,7 +13,7 @@ class ArticleFetcher:
         self, 
         query: str, 
         count: int = 100,
-        days_back: int = 29
+        days_back: int = 7
     ) -> List[Dict]:
         """
         Fetch articles from News API
@@ -21,7 +21,7 @@ class ArticleFetcher:
         Args:
             query: Search query (topic name)
             count: Number of articles to fetch
-            days_back: How far back to search
+            days_back: How far back to search (7 days for free plan)
         
         Returns:
             List of article dictionaries
@@ -93,6 +93,7 @@ class ArticleFetcher:
                 'published_at': article.get('publishedAt'),
                 'author': article.get('author'),
                 'url_to_image': article.get('urlToImage'),
+                # Use title + description for now (simple)
                 'full_text': f"{article['title']} {article.get('description', '')}"
             }
             
